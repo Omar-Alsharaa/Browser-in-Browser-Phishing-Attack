@@ -52,6 +52,7 @@ sudo docker exec firefox-kiosk sed -i \
 
 ## 2. GitHub Pages Frontend ("Bridge")
 Create an index.html file in your repository to act as a secure frontend wrapper.
+
 ⚠️ Replace YOUR_SERVER_IP with your Oracle Cloud public IP address.
 ```HTML
 <!DOCTYPE html>
